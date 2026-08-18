@@ -1,0 +1,49 @@
+{
+  "alphas": [
+    "lstm_all_b_s2",
+    "lstm_tech_b_s3",
+    "mlp_tech_b",
+    "solo_gap",
+    "mlp_rev_a",
+    "mlp_volvol_b_s2"
+  ],
+  "feature_sets": {
+    "lstm_all_b_s2": [
+      "gap",
+      "high_low_range_20",
+      "industry_rev_5",
+      "intraday_rev_20",
+      "mom_20",
+      "mom_5",
+      "mom_60",
+      "price_to_ma20",
+      "range_pos",
+      "rev_1",
+      "vol_20",
+      "volume_spike_20"
+    ],
+    "lstm_tech_b_s3": [
+      "gap",
+      "price_to_ma20",
+      "range_pos"
+    ],
+    "mlp_tech_b": [
+      "gap",
+      "price_to_ma20",
+      "range_pos"
+    ],
+    "solo_gap": [
+      "gap"
+    ],
+    "mlp_rev_a": [
+      "industry_rev_5",
+      "intraday_rev_20",
+      "rev_1"
+    ],
+    "mlp_volvol_b_s2": [
+      "high_low_range_20",
+      "vol_20",
+      "volume_spike_20"
+    ]
+  }
+}

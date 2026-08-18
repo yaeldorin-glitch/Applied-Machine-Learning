@@ -1,0 +1,24 @@
+# Raw price panels are course-provided and too large for git (one file is
+# >100MB, over GitHub's hard limit). Keep them local only; see data/README.md.
+data/*.csv
+!data/groups.csv
+
+# Colorization training images (auto-downloaded, swappable dataset).
+notebooks/colorization_data/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Old unorganized copies kept out of git (superseded by notebooks/ and data/)
+Code - Directives/
+Data1/
+Data2/
+directives.txt.bak

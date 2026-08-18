@@ -1,0 +1,108 @@
+===============================================================================
+BAR-ILAN APPLIED ML -- FINAL ASSIGNMENT
+PART I : CROSS-SECTIONAL ALPHA RESEARCH
+===============================================================================
+
+GOAL
+Predict which stocks will out- or under-perform over the next day or few days, turn that into a
+daily long/short book, and show it works out-of-sample. You build the FEATURES and the
+MODELS; the framework fixes how data is loaded and how a book is scored for everyone.
+
+WHAT YOU GET
+* finance_toolkit.py : all the machinery.  
+You may add loss functions, models, utility functions to compute your features following the eaxamples there.
+* financial_template.py : the notebook you fill in.
+* Price panels, one CSV each: open, high, low, close, volume, returns. 
+* groups.csv : each stock's sector and industry code.
+
+Everything is a PANEL of shape (days x stocks).  Every operator takes panels and returns a
+panel of the same shape. WARNING: be mindful of the data, the missing data, take time to explore it,
+to build your feature in a sensible way, mind the outliers and other anomalies to make your feature more efficient.
+For instance, make sure to build return features from "returns" and not from close.pct_change() because of splits.
+(retruns were computed with adjusted close although when comparing close to high or low you want to use raw close).
+
+MODEL CONTRACT -- your model, whatever it is, must satisfy exactly this:
+    model.predict(feat_t) -> scores
+    feat_t : float tensor (days, stocks, features)
+    scores : float tensor (days, stocks)   -- higher score = expected winner
+
+THE FLOW (blocks in the template)
+FIXED 1     Data is loaded for you. Same for everyone.
+FREE 1      Build a SUPERSET of named features: all_features = {name: panel}.  Use ts_* ops
+            (over time) and cs_* ops (across stocks).  End with a cs_* op (cs_zscore / cs_rank)
+            so stocks share a scale each day; pass a group to neutralise, e.g.
+            cs_zscore(sig, sector).
+FREE 2      Write ONE template recipe build_alpha(config): a config (feature subset, model, hidden,
+            epochs, lr, weight decay -- add knobs freely) that trains a model, scores the hold-out,
+            and returns its PnL and the feature names it used.
+FREE 3      Loop build_alpha over MANY configs.  This is your search: vary features, model,
+            hyper-parameters.  Each config = one candidate alpha.
+FIXED 4     The framework scores every alpha, shows their correlation, and keeps the best
+            UN-CORRELATED set.  Copies of one idea do not help you.
+FIXED 5     The submission is written for you: per kept alpha, the trained model (model_<i>.pt)
+            and its feature-name list (params.json).
+
+RULES
+* No look-ahead: the target is the return one day or a few days ahead (up to you); 
+  features use data only up to today. Do not read the hold-out period inside a feature.
+* Be reproducible: the grader re-runs your FREE 1 features on a HIDDEN later period, so
+  features must transform the given panels only -- no external data, no hard-coded dates,
+  no randomness outside the fixed SEED.
+
+WHAT YOU SUBMIT
+1. Your completed notebook with the FREE 1 features in it. 
+   All features that will be used by your candidate alphas must be there so that I can reproduce the alpha.
+2. The submission/ folder from FIXED 5: model_<i>.pt (one per kept alpha) + params.json.
+3. You must find at least 10 alphas with sharpe > 1.2 and turnover < 0.8 and your 10 alphas should have a maximum correlation of 0.5 between them.
+
+HOW YOU ARE GRADED
+Your saved models are run on a HIDDEN later period you never see.  We look at out-of-sample
+performance and at how genuinely different your alphas are from each other.  Details later.
+
+TIPS
+* Get the whole pipeline running on the one worked feature first, then add ideas.
+* More features is not better: redundant ones add noise.  Neutralise by sector to drop sector bets.
+* A simple model that generalises beats a big one that overfits.  Watch the train/hold-out gap.
+
+===============================================================================
+PART II : IMAGE COLORIZATION
+===============================================================================
+
+GOAL
+Train a model that takes a GRAYSCALE image and predicts a plausible COLOR version
+of it. Input is one channel (luminance); output is a full color image of the same size.
+
+WHAT YOU GET
+* colorization_template.py : the skeleton you fill in.
+* You may choose all the image you want to train your model.
+
+Fixed conventions (do NOT change them):
+* All images are handled at 256 x 256.
+* colorize(gray_img, model) takes and returns ARRAYS (numpy image arrays), not file paths.
+* Weights are saved with state_dict (not the whole model).
+
+WHAT YOU BUILD
+* ColorizeModel(nn.Module): input a 1-channel 256x256 gray image, output a 3-channel 256x256
+  color image.  Any architecture (a small U-Net works well).
+* The training loop: convert color images to gray for the input, use the original color as the
+  target, minimise a reconstruction loss (e.g. L1 or MSE).
+* load_model(weights_path): rebuild the network and load your saved state_dict.
+* colorize(gray_img, model): run one gray image through the model and return the color image.
+
+RULES
+* Keep the three fixed conventions (256x256, arrays-not-paths, state_dict) so your model loads
+  and runs automatically.
+* Your weights must load with load_model with no manual edits.
+
+WHAT YOU SUBMIT
+1. Your completed colorization_template.py (or notebook).  
+2. Your trained weights or model (state_dict).
+
+HOW YOU ARE GRADED
+Your model is loaded in your notebook and colorize is run on HIDDEN grayscale images.  
+We look at how close and how natural the colors are on images you never trained on. 
+
+TIPS
+* Get one image through the full pipeline (gray -> model -> color) before scaling up.
+* Normalise inputs the same way in training and in colorize.
+* Overfitting shows as good train images but wrong colors on new ones -- hold a few out to check.
