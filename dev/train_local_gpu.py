@@ -52,6 +52,7 @@ resume.
 
 import argparse
 import glob
+import json
 import os
 import random
 import shutil
@@ -184,6 +185,36 @@ HUE_BIN_EDGES = [(345, 15, "red"), (15, 45, "orange"), (45, 75, "yellow"),
                   (75, 165, "green"), (165, 195, "cyan"), (195, 255, "blue"),
                   (255, 285, "purple"), (285, 345, "magenta")]
 NEUTRAL_THRESHOLD = 0.12
+
+
+def get_hue_bins_cached(paths, cache_path):
+    """Same result as [dominant_hue_bin(p) for p in paths], but reads from
+    a JSON cache (path -> bin) first and only classifies images not
+    already in it -- makes every run after the first skip the ~102k-image
+    classification scan entirely (was the last slow, uncached step before
+    training could start; confirmed directly this was taking real time on
+    a fresh run)."""
+    cache = {}
+    if os.path.exists(cache_path):
+        with open(cache_path, encoding="utf-8") as f:
+            cache = json.load(f)
+    bins = []
+    new_count = 0
+    for p in paths:
+        if p in cache:
+            bins.append(cache[p])
+        else:
+            b = dominant_hue_bin(p)
+            cache[p] = b
+            bins.append(b)
+            new_count += 1
+    if new_count:
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(cache, f)
+        print("hue cache: classified %d new image(s), reused %d from cache" % (new_count, len(paths) - new_count))
+    else:
+        print("hue cache: all %d images found in cache, nothing to classify" % len(paths))
+    return bins
 
 
 def dominant_hue_bin(path):
@@ -378,6 +409,15 @@ def main():
     parser.add_argument("--allow-cpu", action="store_true",
                          help="without this flag, the script refuses to start unless CUDA is available -- "
                               "the whole point of running this locally instead of Colab is the GPU")
+    parser.add_argument("--grad-accum-steps", type=int, default=2,
+                         help="accumulate gradients over this many batches before each optimizer step -- "
+                              "with --batch-size 4 and the default of 2, each optimizer update is based on "
+                              "4*2=8 images' worth of gradient, matching the batch=8 the LR (--lr 1e-3) was "
+                              "originally tuned for on Colab's larger-VRAM GPUs, while only ever holding 4 "
+                              "images in GPU memory at once. Set to 1 to disable (plain per-batch updates). "
+                              "Does NOT change BatchNorm's statistics, which are still computed per physical "
+                              "batch (4) -- this recovers batch=8-equivalent GRADIENT quality, not a fully "
+                              "identical replica of true batch=8 in every respect.")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -402,9 +442,10 @@ def main():
     print("coco found:", len(coco_paths))
 
     all_paths = natural_paths + flower_paths + coco_paths
-    print("classifying dominant hue for every image (one-time cost, not per-epoch) --",
-          "this can take a while the first time with %d images ..." % len(all_paths))
-    all_bins = [dominant_hue_bin(p) for p in all_paths]
+    print("classifying dominant hue for every image (one-time cost, cached after the first run) --",
+          "%d images ..." % len(all_paths))
+    hue_cache_path = os.path.join(args.data_root, "hue_cache.json")
+    all_bins = get_hue_bins_cached(all_paths, hue_cache_path)
     bin_counts = Counter(all_bins)
     print("hue distribution across the full pool:", dict(bin_counts))
 
@@ -478,18 +519,30 @@ def main():
     for epoch in range(start_epoch, args.epochs):
         model.train()
         train_loss = 0.0
-        for y, cbcr in train_loader:
+        opt.zero_grad()
+        num_batches = 0
+        for step, (y, cbcr) in enumerate(train_loader):
             y, cbcr = y.to(device), cbcr.to(device)
-            opt.zero_grad()
             pred = model(y)
             pred_rgb = ycbcr_to_rgb_torch(y, pred[:, 0:1], pred[:, 1:2])
             target_rgb = ycbcr_to_rgb_torch(y, cbcr[:, 0:1], cbcr[:, 1:2])
             l1 = color_weighted_l1(pred, cbcr, target_rgb)
             perceptual = vgg_loss_fn(pred_rgb, target_rgb)
             loss = l1 + PERCEPTUAL_WEIGHT * perceptual
-            loss.backward()
-            opt.step()
+            # Divide by grad_accum_steps so accumulated gradients have the
+            # same magnitude a single loss.backward() on the larger
+            # effective batch would have produced (each micro-batch's
+            # gradient contributes its proportional share, not a full share
+            # grad_accum_steps times over).
+            (loss / args.grad_accum_steps).backward()
             train_loss += loss.item() * y.size(0)
+            num_batches = step + 1
+            if num_batches % args.grad_accum_steps == 0:
+                opt.step()
+                opt.zero_grad()
+        if num_batches % args.grad_accum_steps != 0:
+            opt.step()  # flush leftover accumulation if the batch count doesn't divide evenly
+            opt.zero_grad()
         train_loss /= len(train_ds)
 
         model.eval()
