@@ -55,6 +55,7 @@ import glob
 import json
 import os
 import random
+import time
 import shutil
 import subprocess
 import sys
@@ -521,6 +522,14 @@ def main():
         train_loss = 0.0
         opt.zero_grad()
         num_batches = 0
+        num_train_batches = len(train_loader)
+        # Print roughly 20 progress updates per epoch (every ~5%) -- with
+        # tens of thousands of batches and nothing printed until the whole
+        # epoch finishes, a run can look identical whether it's working
+        # normally or silently stuck; this gives a live, visible signal
+        # (batch count and elapsed time) during the wait instead of none.
+        progress_every = max(1, num_train_batches // 20)
+        epoch_start = time.time()
         for step, (y, cbcr) in enumerate(train_loader):
             y, cbcr = y.to(device), cbcr.to(device)
             pred = model(y)
@@ -540,6 +549,13 @@ def main():
             if num_batches % args.grad_accum_steps == 0:
                 opt.step()
                 opt.zero_grad()
+            if num_batches % progress_every == 0 or num_batches == num_train_batches:
+                elapsed = time.time() - epoch_start
+                rate = num_batches / elapsed if elapsed > 0 else 0
+                eta_sec = (num_train_batches - num_batches) / rate if rate > 0 else 0
+                print("  epoch %d train: batch %d/%d (%.0f%%) -- %.0fs elapsed, ~%.0fs left in this epoch"
+                      % (epoch, num_batches, num_train_batches, 100.0 * num_batches / num_train_batches,
+                         elapsed, eta_sec))
         if num_batches % args.grad_accum_steps != 0:
             opt.step()  # flush leftover accumulation if the batch count doesn't divide evenly
             opt.zero_grad()
