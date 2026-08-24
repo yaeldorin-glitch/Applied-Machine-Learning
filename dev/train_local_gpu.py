@@ -188,13 +188,18 @@ HUE_BIN_EDGES = [(345, 15, "red"), (15, 45, "orange"), (45, 75, "yellow"),
 NEUTRAL_THRESHOLD = 0.12
 
 
-def get_hue_bins_cached(paths, cache_path):
+def get_hue_bins_cached(paths, cache_path, save_every=2000):
     """Same result as [dominant_hue_bin(p) for p in paths], but reads from
     a JSON cache (path -> bin) first and only classifies images not
     already in it -- makes every run after the first skip the ~102k-image
     classification scan entirely (was the last slow, uncached step before
     training could start; confirmed directly this was taking real time on
-    a fresh run)."""
+    a fresh run). Saves the cache to disk every save_every newly-classified
+    images, not only once at the very end -- classifying ~102k images
+    takes real minutes, and if this run gets interrupted partway through
+    (closed terminal, crash, restart to change a setting -- all things
+    that happened repeatedly today), only the images since the last
+    periodic save need reclassifying, not the whole run from zero."""
     cache = {}
     if os.path.exists(cache_path):
         with open(cache_path, encoding="utf-8") as f:
@@ -209,6 +214,9 @@ def get_hue_bins_cached(paths, cache_path):
             cache[p] = b
             bins.append(b)
             new_count += 1
+            if new_count % save_every == 0:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(cache, f)
     if new_count:
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(cache, f)
@@ -495,6 +503,17 @@ def main():
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         opt, mode="min", factor=0.5, patience=args.lr_patience)
 
+    # Mixed precision: on RTX-class GPUs (Tensor Cores), running the
+    # forward pass in float16 where safe is both faster and roughly
+    # halves activation memory, while GradScaler keeps the backward pass
+    # numerically stable (it scales the loss up before backward so small
+    # gradients don't underflow to zero in float16, then unscales before
+    # the optimizer step) -- this is what keeps AMP from silently
+    # degrading training quality, not just a speed trick on its own.
+    # enabled=False on CPU makes autocast/scaler a no-op automatically,
+    # so --allow-cpu testing still works unchanged.
+    scaler = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda"))
+
     start_epoch = 0
     best_val_loss = float("inf")
     if os.path.exists(checkpoint_path):
@@ -502,6 +521,8 @@ def main():
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["optimizer"])
         scheduler.load_state_dict(ckpt["scheduler"])
+        if "scaler" in ckpt:
+            scaler.load_state_dict(ckpt["scaler"])
         start_epoch = ckpt["epoch"] + 1
         best_val_loss = ckpt["best_val_loss"]
         print("resuming from checkpoint: epoch %d, best val loss so far %.4f" % (start_epoch, best_val_loss))
@@ -541,22 +562,29 @@ def main():
         epoch_start = time.time()
         for step, (y, cbcr) in enumerate(train_loader):
             y, cbcr = y.to(device), cbcr.to(device)
-            pred = model(y)
-            pred_rgb = ycbcr_to_rgb_torch(y, pred[:, 0:1], pred[:, 1:2])
-            target_rgb = ycbcr_to_rgb_torch(y, cbcr[:, 0:1], cbcr[:, 1:2])
-            l1 = color_weighted_l1(pred, cbcr, target_rgb)
-            perceptual = vgg_loss_fn(pred_rgb, target_rgb)
-            loss = l1 + PERCEPTUAL_WEIGHT * perceptual
+            with torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
+                pred = model(y)
+                pred_rgb = ycbcr_to_rgb_torch(y, pred[:, 0:1], pred[:, 1:2])
+                target_rgb = ycbcr_to_rgb_torch(y, cbcr[:, 0:1], cbcr[:, 1:2])
+                l1 = color_weighted_l1(pred, cbcr, target_rgb)
+                perceptual = vgg_loss_fn(pred_rgb, target_rgb)
+                loss = l1 + PERCEPTUAL_WEIGHT * perceptual
             # Divide by grad_accum_steps so accumulated gradients have the
             # same magnitude a single loss.backward() on the larger
             # effective batch would have produced (each micro-batch's
             # gradient contributes its proportional share, not a full share
-            # grad_accum_steps times over).
-            (loss / args.grad_accum_steps).backward()
+            # grad_accum_steps times over). scaler.scale multiplies the
+            # loss up before backward so small float16 gradients don't
+            # underflow to zero; scaler.step unscales them back down
+            # before actually calling opt.step (and skips the step
+            # entirely if it finds an inf/nan, adjusting the scale for
+            # next time instead of corrupting the weights).
+            scaler.scale(loss / args.grad_accum_steps).backward()
             train_loss += loss.item() * y.size(0)
             num_batches = step + 1
             if num_batches % args.grad_accum_steps == 0:
-                opt.step()
+                scaler.step(opt)
+                scaler.update()
                 opt.zero_grad()
             if num_batches % progress_every == 0 or num_batches == num_train_batches:
                 elapsed = time.time() - epoch_start
@@ -566,13 +594,14 @@ def main():
                       % (epoch, num_batches, num_train_batches, 100.0 * num_batches / num_train_batches,
                          elapsed, eta_sec))
         if num_batches % args.grad_accum_steps != 0:
-            opt.step()  # flush leftover accumulation if the batch count doesn't divide evenly
+            scaler.step(opt)  # flush leftover accumulation if the batch count doesn't divide evenly
+            scaler.update()
             opt.zero_grad()
         train_loss /= len(train_ds)
 
         model.eval()
         val_loss = 0.0
-        with torch.no_grad():
+        with torch.no_grad(), torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
             for y, cbcr in val_loader:
                 y, cbcr = y.to(device), cbcr.to(device)
                 pred = model(y)
@@ -600,6 +629,7 @@ def main():
             "model": model.state_dict(),
             "optimizer": opt.state_dict(),
             "scheduler": scheduler.state_dict(),
+            "scaler": scaler.state_dict(),
             "epoch": epoch,
             "best_val_loss": best_val_loss,
         }, checkpoint_path)
