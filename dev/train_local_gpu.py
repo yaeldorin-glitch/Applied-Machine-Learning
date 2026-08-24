@@ -206,7 +206,10 @@ def get_hue_bins_cached(paths, cache_path, save_every=2000):
             cache = json.load(f)
     bins = []
     new_count = 0
-    for p in paths:
+    total = len(paths)
+    progress_every = max(1, total // 20)
+    start = time.time()
+    for i, p in enumerate(paths):
         if p in cache:
             bins.append(cache[p])
         else:
@@ -217,6 +220,12 @@ def get_hue_bins_cached(paths, cache_path, save_every=2000):
             if new_count % save_every == 0:
                 with open(cache_path, "w", encoding="utf-8") as f:
                     json.dump(cache, f)
+        if (i + 1) % progress_every == 0 or (i + 1) == total:
+            elapsed = time.time() - start
+            rate = (i + 1) / elapsed if elapsed > 0 else 0
+            eta_sec = (total - (i + 1)) / rate if rate > 0 else 0
+            print("  hue classification: %d/%d (%.0f%%) -- %.0fs elapsed, ~%.0fs left"
+                  % (i + 1, total, 100.0 * (i + 1) / total, elapsed, eta_sec))
     if new_count:
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(cache, f)
