@@ -427,14 +427,16 @@ def main():
     parser.add_argument("--allow-cpu", action="store_true",
                          help="without this flag, the script refuses to start unless CUDA is available -- "
                               "the whole point of running this locally instead of Colab is the GPU")
-    parser.add_argument("--grad-accum-steps", type=int, default=2,
-                         help="accumulate gradients over this many batches before each optimizer step -- "
-                              "with --batch-size 4 and the default of 2, each optimizer update is based on "
-                              "4*2=8 images' worth of gradient, matching the batch=8 the LR (--lr 1e-3) was "
-                              "originally tuned for on Colab's larger-VRAM GPUs, while only ever holding 4 "
-                              "images in GPU memory at once. Set to 1 to disable (plain per-batch updates). "
+    parser.add_argument("--grad-accum-steps", type=int, default=1,
+                         help="accumulate gradients over this many batches before each optimizer step. "
+                              "Default of 1 (no accumulation) is correct when --batch-size is already 8 "
+                              "(the default, and what the LR --lr 1e-3 was originally tuned for on Colab's "
+                              "larger-VRAM GPUs). If you have to lower --batch-size for a smaller GPU (e.g. "
+                              "4 on a 6GB card), raise this to compensate -- e.g. --batch-size 4 "
+                              "--grad-accum-steps 2 makes each optimizer update based on 4*2=8 images' worth "
+                              "of gradient again, while only ever holding 4 images in GPU memory at once. "
                               "Does NOT change BatchNorm's statistics, which are still computed per physical "
-                              "batch (4) -- this recovers batch=8-equivalent GRADIENT quality, not a fully "
+                              "batch -- this recovers batch=8-equivalent GRADIENT quality, not a fully "
                               "identical replica of true batch=8 in every respect.")
     args = parser.parse_args()
 

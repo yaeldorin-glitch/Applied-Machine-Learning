@@ -28,26 +28,25 @@ your Google Drive after every single epoch:
 
 ---
 
-## Before you start: what you need from your partner (already being sent)
+## Before you start: what you need
 
-- A folder/zip containing: `train_local_gpu.py`, `requirements_gpu_partner.txt`,
-  `weights_epoch26_warm_start.pth`, and this file.
-- A Kaggle account credentials file (`kaggle.json`).
+- The `dev` folder from the GitHub repo (or the standalone zip), containing:
+  `train_local_gpu.py`, `PARTNER_SETUP.md` (this file), `requirements_gpu_partner.txt`,
+  `weights_epoch26_warm_start.pth`. If you downloaded the whole repo as a
+  ZIP from GitHub's "Code" button, these 4 files are inside its `dev`
+  subfolder -- everything else in that download is unrelated (the other
+  half of the project) and can be ignored.
+- A Kaggle account credentials file (`kaggle.json`), sent separately.
 - A Google Drive folder shared with you, with a `weights.pth` file inside it
   -- move/copy that file into your own Drive's "My Drive" root area if you
-  haven't already (you mentioned you already did this step).
+  haven't already.
+
+You already confirmed you have an NVIDIA RTX 4050 -- that's a real GPU
+PyTorch can use, so there's nothing to check there. Start with Step 1 below.
 
 ---
 
-## Step 1 -- Confirm you have an NVIDIA GPU
-
-Open the Start menu, search "Device Manager", open it, expand "Display
-adapters". If you see something like "NVIDIA GeForce/RTX/GTX ..." you're
-good -- that's what all the steps below assume. (If it only shows Intel or
-AMD, stop and let your partner know -- the CUDA-specific steps below won't
-apply and we'd need a different plan.)
-
-## Step 2 -- Make sure your NVIDIA drivers are current
+## Step 1 -- Check your NVIDIA driver, and note your CUDA version
 
 Open a terminal (Start menu -> search "Terminal" or "PowerShell") and run:
 
@@ -56,73 +55,77 @@ nvidia-smi
 ```
 
 If that prints a table with your GPU's name, driver version, and CUDA
-version in the top right -- you're set, skip to Step 3. If it says the
+version in the top right -- you're set, move to Step 2. Write down the CUDA
+version shown (e.g. "12.4") -- you'll need it in Step 3. If it says the
 command isn't recognized, search "NVIDIA driver download" on the NVIDIA
 website, download the driver for your exact GPU model, install it, restart,
 then re-run `nvidia-smi` to confirm.
 
-## Step 3 -- Install Python (if VS Code doesn't already have one set up)
+## Step 2 -- Install Python 3.12 specifically (not the newest version)
 
-In VS Code: open the Extensions panel (left sidebar) and make sure the
-"Python" extension (by Microsoft) is installed. Then open a terminal inside
-VS Code (Terminal menu -> New Terminal) and run:
+**Use Python 3.12, not whatever's newest on python.org's front page.**
+PyTorch's GPU-enabled Windows builds only support up to Python 3.12 --
+anything newer (3.13, 3.14, ...) only has CPU-only wheels available, which
+would silently defeat the entire point of running this on a GPU. Go to
+**python.org/downloads/release/python-31210/**, scroll to "Files", and
+download **"Windows installer (64-bit)"**. Run it, check the box that says
+**"Add python.exe to PATH"**, click Install Now.
 
-```
-python --version
-```
-
-If it prints something like `Python 3.11.x` (anything 3.10-3.13 is fine),
-you're set. If it errors, search "python.org downloads", get the latest
-installer, run it (check the box that says "Add python.exe to PATH" during
-install), then re-open the VS Code terminal and try again.
-
-## Step 4 -- Install PyTorch WITH CUDA support (the step most likely to go wrong)
-
-This is the one step to be careful with. Running `pip install torch` by
-itself often installs a CPU-only build with no error message -- it just
-silently trains on CPU instead of your GPU, which would turn an
-overnight run into a multi-week one.
-
-Go to **pytorch.org/get-started/locally** in a browser. It has a small
-form: pick "Stable", your OS (Windows), "Pip", "Python", and for "Compute
-Platform" pick the CUDA version that matches what `nvidia-smi` showed you in
-Step 2 (pick the closest one at or below your driver's CUDA version). It
-generates a command that looks like this (yours may differ -- use the one
-the site gives you, not this exact line):
+Then open a terminal inside VS Code (Terminal menu -> New Terminal, or
+close and reopen it if one was already open) and run:
 
 ```
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+py --version
 ```
 
-Run that command in the VS Code terminal. This step downloads a few GB and
-can take a while.
+It should print `Python 3.12.10`. Use `py` (not `python`) for every command
+below -- Windows ships a placeholder `python` command of its own that can
+intercept the real one and silently do nothing useful (it just prints the
+word "Python" with no version and no error); `py` reliably finds the actual
+installed Python instead, so it's the safer command to use throughout.
 
-**Then verify it actually worked, before doing anything else:**
+## Step 3 -- Install PyTorch WITH the CUDA build (don't use the plain install)
+
+On Windows, plain `pip install torch` reliably grabs a CPU-only build --
+confirmed directly, not a maybe. Install the CUDA build explicitly instead:
 
 ```
-python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+py -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 ```
 
-This must print `True` and your GPU's name. If it prints `False`, the
-install grabbed the CPU build -- redo Step 4, double check the CUDA version
-you picked, and don't move on until this prints `True`. The training script
-itself also checks this automatically and refuses to start on CPU (it will
-tell you if this step needs redoing), but it's worth confirming here first
-so you're not waiting on the script to tell you.
+(`cu126` was confirmed to have matching Windows/Python-3.12 wheels at the
+time this guide was written. If this specific command ever fails with
+"no matching distribution," go to **pytorch.org/get-started/locally** in a
+browser -- it has a form that picks the current correct URL for you.)
 
-## Step 5 -- Install the rest of the Python packages
+This downloads a few GB, takes a few minutes. Then check it actually sees
+your GPU:
+
+```
+py -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+```
+
+**This must print `True` and your GPU's name before moving on.** If it
+still prints `False`, run `py -m pip uninstall -y torch torchvision` first
+(mixing a CPU build and a CUDA build in the same environment causes
+confusing errors) and then retry the install command above. The training
+script itself also refuses to start on CPU and will tell you if this step
+needs redoing, but it's worth confirming here first rather than finding
+out after everything else is set up.
+
+## Step 4 -- Install the rest of the Python packages
 
 In the folder your partner sent you, open a terminal in VS Code and run:
 
 ```
-pip install -r requirements_gpu_partner.txt
+py -m pip install -r requirements_gpu_partner.txt
 ```
 
 (This deliberately does *not* touch torch/torchvision -- those are already
-correctly installed from Step 4, and this file is designed not to
+correctly installed from Step 3, and this file is designed not to
 overwrite them.)
 
-## Step 6 -- Install Google Drive for Desktop
+## Step 5 -- Install Google Drive for Desktop
 
 Search "Google Drive for Desktop download" and install it (this is
 different from just using drive.google.com in a browser -- it makes your
@@ -134,9 +137,9 @@ weights folder with.
 Once it's running, open File Explorer -- you should see "Google Drive" in
 the left sidebar. Click it and note the path (usually something like
 `G:\My Drive\` -- it'll show in the File Explorer address bar). You'll need
-this path in Step 9.
+this path in Step 8.
 
-## Step 7 -- Place the Kaggle credentials file
+## Step 6 -- Place the Kaggle credentials file
 
 Your partner is sending you a `kaggle.json` file. Put it here:
 
@@ -149,35 +152,36 @@ automatically download one of the training datasets (Kaggle "Natural
 Images") -- without it, that download step will fail with a clear message
 telling you this file is missing.
 
-## Step 8 -- Locate the warm-start weights file
+## Step 7 -- Locate the warm-start weights file
 
 Confirm `weights_epoch26_warm_start.pth` (sent alongside the script) is in
 the same folder as `train_local_gpu.py`. This is real progress from an
 earlier training run -- the script starts from here instead of from
 scratch, so hours of earlier training aren't wasted.
 
-## Step 9 -- Run it
+## Step 8 -- Run it
 
 In the VS Code terminal, in the folder with `train_local_gpu.py`:
 
 ```
-python train_local_gpu.py --checkpoint-dir "G:\My Drive\colorization_checkpoints_v3" --epochs 300 --coco-images 80000 --batch-size 4
+py train_local_gpu.py --checkpoint-dir "G:\My Drive\colorization_checkpoints_v3" --epochs 300 --coco-images 80000 --batch-size 8 --grad-accum-steps 1
 ```
 
-Replace `G:\My Drive\` with whatever Step 6 showed you if it's different.
+Replace `G:\My Drive\` with whatever Step 5 showed you if it's different.
 Note this uses a **new** folder name (`_v3`, not `_v2`) -- deliberately not
 the same Drive folder the Colab run was using, so this run starts its own
 clean training schedule instead of trying to resume the old run's optimizer
 state, which was tuned for a much smaller dataset.
 
-**`--batch-size 4`, not the script's default of 8**: the RTX 4050 laptop GPU
-has 6GB of VRAM. The Colab runs this model was tuned on had far more (Colab
-GPUs are typically 16GB+), and this model is memory-hungry -- a 15.3M-
-parameter U-Net plus a VGG19 perceptual loss, both run at full 256x256. If
-you still see a "CUDA out of memory" error at batch=4, add `--batch-size 2`
-instead (see the troubleshooting section below).
+**`--batch-size 8` -- confirmed to fit on a 6GB card, verified directly**:
+memory usage at batch=4 measured at 2,921 MiB out of 6,141 MiB (under half),
+so batch=8 has real headroom. If you still see a "CUDA out of memory" error,
+drop to `--batch-size 4 --grad-accum-steps 2` instead (matches the same
+effective gradient quality via accumulation, just processes fewer images in
+memory at once -- see the troubleshooting section below), and only go as
+low as `--batch-size 2 --grad-accum-steps 4` if that still isn't enough.
 
-## Step 10 -- What happens next, and how long it takes
+## Step 9 -- What happens next, and how long it takes
 
 In order, the first time you run it:
 1. Downloads Flowers102 (~330MB) and the Kaggle Natural Images dataset
@@ -212,7 +216,7 @@ on Drive after every improving epoch, your partner can download and check
 progress at any time without waiting for the run to finish or interrupting
 it.
 
-## Step 11 -- Don't let it get interrupted
+## Step 10 -- Don't let it get interrupted
 
 - Keep the VS Code terminal window open for the whole run. Closing it kills
   the process.
@@ -227,14 +231,17 @@ it.
 ## If something goes wrong
 
 - **"torch.cuda.is_available() is False"** when the script starts: redo
-  Step 4, you likely have the CPU-only torch build installed.
-- **"CUDA out of memory"** partway through an epoch: add `--batch-size 2` to
-  the run command (or `--batch-size 1` if 2 still fails). This just means
-  fewer images are processed at once -- it doesn't affect the final result,
-  only makes each epoch a bit slower. Re-run the same command; `checkpoint.pt`
+  Step 3, you likely have the CPU-only torch build installed.
+- **"CUDA out of memory"** partway through an epoch: lower `--batch-size`
+  and raise `--grad-accum-steps` to compensate, keeping their product at 8
+  -- try `--batch-size 4 --grad-accum-steps 2` first, then
+  `--batch-size 2 --grad-accum-steps 4` if that's still too much. This
+  keeps the same effective gradient quality while only holding fewer
+  images in GPU memory at once -- it doesn't affect the final result, only
+  makes each epoch a bit slower. Re-run the same command; `checkpoint.pt`
   (if any epoch already completed) or `weights_epoch26_warm_start.pth`
   (if none did) means nothing already done is lost.
-- **Kaggle download fails / asks for credentials**: redo Step 7, check the
+- **Kaggle download fails / asks for credentials**: redo Step 6, check the
   file is at exactly `C:\Users\<you>\.kaggle\kaggle.json`.
 - **Anything else**: copy the last ~30 lines of the terminal output and send
   them back -- that's almost always enough to tell what happened.
