@@ -432,6 +432,15 @@ def main():
             "run anyway (e.g. to test this script), pass --allow-cpu.")
     print("device:", device, ("(%s)" % torch.cuda.get_device_name(0)) if device.type == "cuda" else "")
 
+    if device.type == "cuda":
+        # Every image is resized to a fixed 256x256 -- input size never
+        # varies, which is exactly the condition this flag needs to be a
+        # safe, free speedup (cuDNN benchmarks conv algorithms once for
+        # that fixed shape and reuses the fastest one, instead of picking
+        # a generic one every call). Would be the wrong call with variable
+        # input sizes; not a concern here.
+        torch.backends.cudnn.benchmark = True
+
     os.makedirs(args.data_root, exist_ok=True)
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
@@ -511,10 +520,10 @@ def main():
         train_weights, num_samples=len(train_weights), replacement=True)
     train_loader = torch.utils.data.DataLoader(
         train_ds, batch_size=args.batch_size, sampler=train_sampler,
-        num_workers=4, pin_memory=(device.type == "cuda"))
+        num_workers=4, pin_memory=(device.type == "cuda"), persistent_workers=True)
     val_loader = torch.utils.data.DataLoader(
         val_ds, batch_size=args.batch_size, shuffle=False,
-        num_workers=2, pin_memory=(device.type == "cuda"))
+        num_workers=2, pin_memory=(device.type == "cuda"), persistent_workers=True)
 
     epochs_since_improvement = 0
     for epoch in range(start_epoch, args.epochs):
