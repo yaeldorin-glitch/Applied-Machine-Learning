@@ -56,6 +56,8 @@ import os
 import random
 import shutil
 import subprocess
+import sys
+import sysconfig
 import zipfile
 from collections import Counter
 
@@ -264,8 +266,16 @@ def ensure_natural_images(data_root):
             "profile -> Account -> Create New API Token, and place the "
             "downloaded kaggle.json at that path (see PARTNER_SETUP.md)."
             % (natural_dir, kaggle_json))
-    subprocess.run(["pip", "install", "-q", "kaggle"], check=True)
-    subprocess.run(["kaggle", "datasets", "download", "-d", "prasunroy/natural-images",
+    # Invoke pip via sys.executable, and the kaggle CLI via its full install
+    # path (sysconfig, not a bare "kaggle" on PATH) -- both a bare "pip" and
+    # a bare "kaggle" command can fail to resolve on Windows even right
+    # after installing successfully, since pip's own console-script
+    # directory isn't always on PATH (confirmed directly: this exact
+    # failure mode already hit "pip" itself during partner setup).
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "kaggle"], check=True)
+    kaggle_exe = os.path.join(sysconfig.get_path("scripts"),
+                               "kaggle.exe" if os.name == "nt" else "kaggle")
+    subprocess.run([kaggle_exe, "datasets", "download", "-d", "prasunroy/natural-images",
                      "-p", data_root], check=True)
     zip_path = os.path.join(data_root, "natural-images.zip")
     with zipfile.ZipFile(zip_path) as zf:
