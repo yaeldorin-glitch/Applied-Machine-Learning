@@ -1,0 +1,8 @@
+# For train_local_gpu.py only -- torch/torchvision are NOT here on purpose.
+# Install those separately with the CUDA-enabled command from PARTNER_SETUP.md
+# step 4 FIRST, then install this file. If this file installed torch/
+# torchvision too, pip could silently pull the CPU-only build and overwrite
+# the correct CUDA one, which is exactly the failure mode PARTNER_SETUP.md is
+# trying to prevent.
+numpy==2.3.2
+pillow==11.3.0
