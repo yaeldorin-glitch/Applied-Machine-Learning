@@ -5,6 +5,7 @@ data/*.csv
 
 # Colorization training images (auto-downloaded, swappable dataset).
 notebooks/colorization_data/
+notebooks/pet_test_data/
 
 # Python
 __pycache__/
