@@ -1,0 +1,54 @@
+{
+  "alphas": [
+    "lstm_mixed",
+    "spline_tech",
+    "lstm_solo_volspikeindustry",
+    "lstm_solo_vol20",
+    "lstm_solo_hlrangeindustry",
+    "linear_volvol",
+    "spline_solo_hlrange20",
+    "mlp_solo_volchange",
+    "spline_solo_mom5",
+    "lstm_solo_rangepos5"
+  ],
+  "feature_sets": {
+    "lstm_mixed": [
+      "gap",
+      "mom_20",
+      "range_pos",
+      "rev_1",
+      "vol_20"
+    ],
+    "spline_tech": [
+      "gap",
+      "price_to_ma20",
+      "range_pos"
+    ],
+    "lstm_solo_volspikeindustry": [
+      "volume_spike_20_industry"
+    ],
+    "lstm_solo_vol20": [
+      "vol_20"
+    ],
+    "lstm_solo_hlrangeindustry": [
+      "hlrange_industry"
+    ],
+    "linear_volvol": [
+      "high_low_range_20",
+      "vol_20",
+      "volume_spike_20"
+    ],
+    "spline_solo_hlrange20": [
+      "high_low_range_20"
+    ],
+    "mlp_solo_volchange": [
+      "vol_change"
+    ],
+    "spline_solo_mom5": [
+      "mom_5"
+    ],
+    "lstm_solo_rangepos5": [
+      "range_pos_5"
+    ]
+  }
+}
