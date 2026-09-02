@@ -83,7 +83,7 @@ showed was needed just to hit the correlation bar honestly.
 ## Joint submission with a partner's alphas — DONE, 18 alphas
 
 The same 9 above (untouched, never swapped) plus 5 of a partner's already-trained
-alphas (`friend_166/404/407/341/387` — verified via her exact feature formulas that
+alphas (`partner_166/404/407/341/387` — verified via her exact feature formulas that
 none of these 5 are purely neutralized, so per the "don't touch neutralized alphas"
 rule these 5 are the legitimate add/swap candidates, not the 9) plus 4 further backup
 candidates from an additional search (rounds 6/8). All 18 verified: sharpe>1.2,
@@ -92,7 +92,7 @@ turnover<0.8, max pairwise correlation ≤0.5. Wired into
 before FIXED 4 — see that cell's own comment for the full reasoning), and
 `output/model_*.pt` + `output/params.json` regenerated for all 18 (verified: every
 file loads correctly with the notebook's own model classes in scope). Synced to
-`הגשה_חלק_1/` (notebook + `output/` + `friend_alphas/`).
+`הגשה_חלק_1/` (notebook + `output/` + `partner_alphas/`).
 
 Real numbers, from a full run today (`joint_integration_test.py`, scratchpad;
 checkpointed per-alpha in `joint_integration_ckpt/`, all 18 models saved there):
@@ -108,11 +108,11 @@ checkpointed per-alpha in `joint_integration_ckpt/`, all 18 models saved there):
 | `spline_solo_hlrange20` | 1.646 | 0.208 | fixed 9 |
 | `mlp_solo_volchange` | 0.480 | 0.314 | fixed 9 — see reproducibility note below |
 | `lstm_solo_hlrangeindustry` | 2.053 | 0.188 | fixed 9 |
-| `friend_166` | 4.183 | 0.347 | partner's 5 |
-| `friend_404` | 1.761 | 0.339 | partner's 5 |
-| `friend_407` | 1.521 | 0.388 | partner's 5 |
-| `friend_341` | 1.331 | 0.597 | partner's 5 |
-| `friend_387` | 1.796 | 0.325 | partner's 5 |
+| `partner_166` | 4.183 | 0.347 | partner's 5 |
+| `partner_404` | 1.761 | 0.339 | partner's 5 |
+| `partner_407` | 1.521 | 0.388 | partner's 5 |
+| `partner_341` | 1.331 | 0.597 | partner's 5 |
+| `partner_387` | 1.796 | 0.325 | partner's 5 |
 | `r8_xgb_mom_120_range_pos_5` | 3.735 | — | backup, added |
 | `r8_rf_close_ma60` | 1.666 | — | backup, added |
 | `r6_spline_range_pos_5` | 1.526 | 0.742 | backup, added |
@@ -120,7 +120,7 @@ checkpointed per-alpha in `joint_integration_ckpt/`, all 18 models saved there):
 
 4 other backup candidates (including the two highest-Sharpe ones, `r8_rf_range_pos_5`
 at 4.28 and `r8_xgb_range_pos_5` at 4.00) were correctly excluded — correlated >0.5
-with `lstm_solo_vol20` or `friend_387` already in the kept set. Real tradeoffs, not a
+with `lstm_solo_vol20` or `partner_387` already in the kept set. Real tradeoffs, not a
 bug: max Sharpe isn't the objective, low correlation is.
 
 **Important bug caught and fixed before this reached the notebook**: feeding all 21

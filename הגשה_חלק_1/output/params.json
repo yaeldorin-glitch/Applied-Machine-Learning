@@ -9,11 +9,11 @@
     "spline_solo_hlrange20",
     "mlp_solo_volchange",
     "lstm_solo_hlrangeindustry",
-    "friend_166",
-    "friend_404",
-    "friend_407",
-    "friend_341",
-    "friend_387",
+    "partner_166",
+    "partner_404",
+    "partner_407",
+    "partner_341",
+    "partner_387",
     "r8_xgb_mom_120_range_pos_5",
     "r8_rf_close_ma60",
     "r6_spline_range_pos_5",
@@ -55,7 +55,7 @@
     "lstm_solo_hlrangeindustry": [
       "hlrange_industry"
     ],
-    "friend_166": [
+    "partner_166": [
       "dist_from_ma",
       "dist_from_ma_neutral",
       "intraday_return",
@@ -65,23 +65,23 @@
       "reversal",
       "reversal_neutral"
     ],
-    "friend_404": [
+    "partner_404": [
       "dist_from_ma_neutral",
       "sector_momentum",
       "vol_surge_neutral"
     ],
-    "friend_407": [
+    "partner_407": [
       "dist_from_ma_neutral",
       "sector_momentum",
       "vol_surge_neutral"
     ],
-    "friend_341": [
+    "partner_341": [
       "feature_1_neutral",
       "momentum_neutral",
       "range_pos",
       "reversal_neutral"
     ],
-    "friend_387": [
+    "partner_387": [
       "dist_from_ma_neutral",
       "sector_momentum",
       "vol_surge_neutral"
