@@ -1,0 +1,35 @@
+{
+  "feature_sets": {
+    "166": [
+      "dist_from_ma",
+      "dist_from_ma_neutral",
+      "intraday_return",
+      "intraday_return_neutral",
+      "range_pos",
+      "range_pos_neutral",
+      "reversal",
+      "reversal_neutral"
+    ],
+    "404": [
+      "dist_from_ma_neutral",
+      "sector_momentum",
+      "vol_surge_neutral"
+    ],
+    "407": [
+      "dist_from_ma_neutral",
+      "sector_momentum",
+      "vol_surge_neutral"
+    ],
+    "341": [
+      "feature_1_neutral",
+      "momentum_neutral",
+      "range_pos",
+      "reversal_neutral"
+    ],
+    "387": [
+      "dist_from_ma_neutral",
+      "sector_momentum",
+      "vol_surge_neutral"
+    ]
+  }
+}

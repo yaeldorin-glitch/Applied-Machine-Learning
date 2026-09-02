@@ -4,12 +4,20 @@
     "spline_tech",
     "lstm_solo_volspikeindustry",
     "lstm_solo_vol20",
-    "lstm_solo_hlrangeindustry",
+    "spline_solo_mom5",
     "linear_volvol",
     "spline_solo_hlrange20",
     "mlp_solo_volchange",
-    "spline_solo_mom5",
-    "lstm_solo_rangepos5"
+    "lstm_solo_hlrangeindustry",
+    "friend_166",
+    "friend_404",
+    "friend_407",
+    "friend_341",
+    "friend_387",
+    "r8_xgb_mom_120_range_pos_5",
+    "r8_rf_close_ma60",
+    "r6_spline_range_pos_5",
+    "r6_lstm_range_pos"
   ],
   "feature_sets": {
     "lstm_mixed": [
@@ -30,8 +38,8 @@
     "lstm_solo_vol20": [
       "vol_20"
     ],
-    "lstm_solo_hlrangeindustry": [
-      "hlrange_industry"
+    "spline_solo_mom5": [
+      "mom_5"
     ],
     "linear_volvol": [
       "high_low_range_20",
@@ -44,11 +52,52 @@
     "mlp_solo_volchange": [
       "vol_change"
     ],
-    "spline_solo_mom5": [
-      "mom_5"
+    "lstm_solo_hlrangeindustry": [
+      "hlrange_industry"
     ],
-    "lstm_solo_rangepos5": [
-      "range_pos_5"
+    "friend_166": [
+      "dist_from_ma",
+      "dist_from_ma_neutral",
+      "intraday_return",
+      "intraday_return_neutral",
+      "range_pos",
+      "range_pos_neutral",
+      "reversal",
+      "reversal_neutral"
+    ],
+    "friend_404": [
+      "dist_from_ma_neutral",
+      "sector_momentum",
+      "vol_surge_neutral"
+    ],
+    "friend_407": [
+      "dist_from_ma_neutral",
+      "sector_momentum",
+      "vol_surge_neutral"
+    ],
+    "friend_341": [
+      "feature_1_neutral",
+      "momentum_neutral",
+      "range_pos",
+      "reversal_neutral"
+    ],
+    "friend_387": [
+      "dist_from_ma_neutral",
+      "sector_momentum",
+      "vol_surge_neutral"
+    ],
+    "r8_xgb_mom_120_range_pos_5": [
+      "raw_mom_120",
+      "raw_range_pos_5"
+    ],
+    "r8_rf_close_ma60": [
+      "raw_close_ma60"
+    ],
+    "r6_spline_range_pos_5": [
+      "raw_range_pos_5"
+    ],
+    "r6_lstm_range_pos": [
+      "raw_range_pos"
     ]
   }
 }
