@@ -71,11 +71,87 @@ showed was needed just to hit the correlation bar honestly.
 - `notebooks/financial_template.ipynb` FREE 1/FREE 2/FREE 3 reflect the final config
   list above. The notebook has been executed end to end for real; FIXED 4/FIXED 5
   wrote real `output/model_*.pt` + `output/params.json` matching the 10 alphas above
-  (verified: no stale files from earlier rounds left in `output/`).
-- Part II: `notebooks/colorization_perceptual_loss.ipynb` uses a base=64 residual
-  U-Net (warm-started from a verified-compatible reference checkpoint), color-
-  weighted L1 + VGG perceptual loss, and inverse-frequency hue-balanced sampling
-  over Natural Images + Flowers102 so training isn't dominated by whichever color
-  happens to be most common in the raw data. Training is in progress on GPU as of
-  this snapshot (resumable from checkpoint at any point, see the training cell's own
-  comments for the mechanism).
+  (verified: no stale files from earlier rounds left in `output/`). **This solo-10
+  version is a complete, valid, submittable state on its own** — everything below is
+  an in-progress bonus improvement (a joint submission with a partner's alphas plus
+  more backup candidates), not something the existing submission depends on.
+- Part II: `notebooks/colorization_perceptual_loss.ipynb` — training finished (real
+  GPU run, `dev/train_local_gpu.py`, COCO + Natural Images + Flowers102, patience-
+  based early stopping). `weights.pth` is the confirmed final checkpoint. Both files
+  are in `הגשה_חלק_2/`, ready to submit as-is.
+
+## Joint submission with a partner's alphas — IN PROGRESS, NOT YET WIRED IN
+
+Goal: submit up to 14 alphas instead of 10 — the same 9 above (all neutralized, kept
+fixed per the student's explicit instruction: never swap these out) plus 5 of a
+partner's already-trained, already-pickled alphas (`friend_166`, `friend_404`,
+`friend_407`, `friend_341`, `friend_387` — verified via her exact feature formulas
+that none of these 5 are purely neutralized, so per the student's rule all 5 are the
+swappable ones, not the fixed 9). Verified together: max pairwise correlation 0.4541,
+combined Sharpe 3.32.
+
+The 9 fixed alphas, freshly reproduced today (retrained from scratch with the real
+FREE 2/3 recipe, matches the originally-submitted numbers):
+
+| alpha | sharpe | turnover |
+|---|---|---|
+| `lstm_mixed` | 3.577 | 0.277 |
+| `spline_tech` | 3.286 | 0.678 |
+| `lstm_solo_volspikeindustry` | 2.594 | 0.264 |
+| `lstm_solo_hlrangeindustry` | 2.067 | 0.177 |
+| `lstm_solo_vol20` | 2.540 | 0.170 |
+| `linear_volvol` | 2.035 | 0.287 |
+| `spline_solo_hlrange20` | 1.599 | 0.154 |
+| `mlp_solo_volchange` | 1.472 | 0.216 |
+| `spline_solo_mom5` | 1.434 | 0.534 |
+
+Friend's 5 (`friend_166/404/407/341/387`): individual sharpe/turnover not
+re-verified in today's run (it crashed right as it reached them, before printing
+their numbers) — the 0.4541/3.32 combined figures above are from an earlier,
+separate verification pass against just these 14, done before this search started.
+Re-confirming their individual numbers is part of finishing the integration test.
+
+On top of that 14, a further alpha search (rounds 6–10, `dev/alpha_search_round*.py`
+in scratchpad, not yet copied into this repo) went looking for more backup candidates
+in case the instructor's hidden data changes which alphas qualify. **Confirmed** (real
+sharpe/turnover, real correlation against the fixed 14's actual PnL, not an estimate):
+
+| candidate | sharpe | turnover | max corr to the 14 |
+|---|---|---|---|
+| `r8_rf_range_pos_5` | 4.13 | 0.58 | 0.486 |
+| `r8_xgb_range_pos_5` | 4.04 | 0.70 | 0.497 |
+| `r8_xgb_mom_120_range_pos_5` | 3.89 | 0.62 | 0.465 |
+| `r6_lstm_price_to_ma20` | 3.44 | 0.27 | 0.478 |
+| `r8_rf_range_pos_20` | 2.30 | 0.48 | 0.404 |
+| `r6_linear_price_to_ma20` | 1.77 | 0.37 | 0.476 |
+| `r8_xgb_mom_10_volume_spike_20` | 1.82 | 0.79 | 0.469 |
+| `r8_rf_close_ma60` | 1.49 | 0.42 | 0.299 |
+| `r6_lstm_range_pos` | 1.40 | 0.31 | 0.361 |
+| `r6_spline_range_pos_5` | 1.38 | 0.74 | 0.256 |
+
+Caveat: the top 3 all share the `range_pos_5` feature (different models) and are
+almost certainly correlated *with each other*, even though each passes against the
+14 individually — the real count of independent additions is more like 6-8, not 10.
+This has not yet been cross-checked (see below).
+
+**What's NOT done yet**: actually writing this into `financial_template.ipynb` —
+adding the partner's feature formulas + the backup candidates' raw features to a new
+cell, loading/retraining everything together, and re-running `select_uncorrelated`
+over the full pool to get the real final kept list. A standalone test of this
+(`joint_integration_test.py`, scratchpad) confirmed the 9 fixed alphas retrain
+correctly in isolation, but repeatedly crashed this machine (8GB RAM, already tight
+from VS Code + extensions) before completing a full run — the script now checkpoints
+per-alpha so a re-run resumes instead of restarting, but that run has not yet
+finished. Rounds 9-10 of the search itself are also still running in the background
+(round 9: GBR/ExtraTrees/Ridge/ElasticNet, ~128 configs; round 10: corrected CNN, 12
+configs) and may add a few more candidates to the table above.
+
+**Next steps for whoever picks this up**: (1) let `joint_integration_test.py` finish
+(or re-run it — it resumes from `joint_integration_ckpt/`) to get the real combined
+`select_uncorrelated` result over all 14 + backups: (2) cross-check the backup
+candidates above against each other, not just against the 14, since the `range_pos_5`
+trio is likely redundant; (3) write the verified final list into the notebook's FREE
+1/3 and a new cell before FIXED 4, matching the pattern already planned (separate
+`friend_feature_panel` / `raw_feature_panel` dicts, no collision with the notebook's
+own neutralized features); (4) re-run FIXED 4/5 for real and update `output/` and
+`הגשה_חלק_1/`.
