@@ -88,9 +88,10 @@ none of these 5 are purely neutralized, so per the "don't touch neutralized alph
 rule these 5 are the legitimate add/swap candidates, not the 9) plus 4 further backup
 candidates from an additional search (rounds 6/8). All 18 verified: sharpe>1.2,
 turnover<0.8, max pairwise correlation ≤0.5. Wired into
-`notebooks/financial_template.ipynb` (new cell, right after the qualifying filter,
-before FIXED 4 — see that cell's own comment for the full reasoning), and
-`output/model_*.pt` + `output/params.json` regenerated for all 18 (verified: every
+`notebooks/financial_template.ipynb` -- all 18 are built together in FREE 3 itself
+(not split into a separate cell -- merged there so the notebook reads as one joint
+submission, not "the 9" then "the added ones"; see that cell's own comment for the
+full reasoning), and `output/model_*.pt` + `output/params.json` regenerated for all 18 (verified: every
 file loads correctly with the notebook's own model classes in scope). Synced to
 `הגשה_חלק_1/` (notebook + `output/` + `partner_alphas/`).
 
